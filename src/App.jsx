@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Home, Camera, Bell, Sparkles, Wallet as WalletIcon } from 'lucide-react'
+import { Home, Camera, Bell, Sparkles, Wallet as WalletIcon, MessageCircle } from 'lucide-react'
 import ReminderList from './ReminderList'
 import AlertList from './AlertList'
 import Capture from './Capture'
 import Wallet from './Wallet'
+import Chat from './Chat'
 
 function App() {
   const [role, setRole] = useState('patient')
@@ -41,6 +42,7 @@ function App() {
     { key: 'home', label: 'Home', icon: Home },
     { key: 'capture', label: 'Capture', icon: Camera },
     { key: 'reminders', label: 'Reminders', icon: Bell },
+    { key: 'chat', label: 'Talk', icon: MessageCircle },
   ]
   const sponsorTabs = [
     { key: 'dashboard', label: 'Dashboard', icon: Home },
@@ -99,6 +101,12 @@ function App() {
                 <>
                   <h1 className="text-2xl font-bold text-gray-900 mb-4">All reminders</h1>
                   <ReminderList reminders={reminders} onToggle={toggleReminder} />
+                </>
+              )}
+              {patientTab === 'chat' && (
+                <>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Talk to us</h1>
+                  <Chat />
                 </>
               )}
             </>
