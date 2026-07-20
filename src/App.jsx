@@ -85,7 +85,7 @@ function App() {
             <>
               {patientTab === 'home' && (
                 <>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Today's Reminders</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Today's Reminders 💊</h1>
                   <ReminderList reminders={reminders} onToggle={toggleReminder} />
                 </>
               )}
