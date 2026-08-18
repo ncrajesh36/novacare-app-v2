@@ -17,7 +17,7 @@ function Chat() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch('web-production-65fd8.up.railway.app', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText, session_id: 'rosa' }),
