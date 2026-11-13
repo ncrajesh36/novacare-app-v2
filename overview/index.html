@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovaCare — Local Overview</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div>
+      <p class="eyebrow">Local overview</p>
+      <h1>NovaCare</h1>
+      <p class="lede">Architecture, runbook, screens, and live service probes — open this page from a static server while developing.</p>
+    </div>
+    <div class="top-actions">
+      <label>
+        Chat API base
+        <input id="apiBase" type="url" spellcheck="false"
+          placeholder="http://localhost:8000"
+          value="http://localhost:8000" />
+      </label>
+      <button id="btnProbe" type="button">Probe services</button>
+    </div>
+  </header>
+
+  <section class="banner" id="overallBanner" data-state="unknown">
+    Overall status: <strong id="overallText">Not checked yet</strong>
+  </section>
+
+  <main class="grid">
+    <section class="panel">
+      <h2>What this is</h2>
+      <p>Mobile-framed healthcare companion: <strong>Rosa</strong> (patient) manages reminders, BP capture, and symptom chat; <strong>Carlos</strong> (sponsor) sees alerts and tops up a wallet.</p>
+      <ul class="meta">
+        <li>UI repo: <code>novacare-app-v2</code></li>
+        <li>Chat API: <code>novacare-backend</code></li>
+        <li>Deployed UI: <a href="https://novacare-app-v2.vercel.app" target="_blank" rel="noreferrer">Vercel</a></li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>How to run</h2>
+      <ol class="steps">
+        <li><code>npm install && npm run dev</code> → Vite UI (~5173)</li>
+        <li>In <code>novacare-backend</code>: <code>uvicorn main:app --reload --port 8000</code></li>
+        <li>Point <code>src/Chat.jsx</code> at <code>http://localhost:8000/chat</code> (or set the base above and probe)</li>
+        <li>This overview: <code>python3 -m http.server 8085</code> in <code>overview/</code></li>
+      </ol>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Architecture</h2>
+      <pre class="arch" aria-label="Architecture diagram">Browser (Vite + React phone shell)
+  App.jsx — role: Rosa | Carlos + tab bar
+    Patient: ReminderList, Capture, Chat
+    Sponsor: AlertList, Wallet
+        │
+        │  POST /chat  { message, session_id }
+        ▼
+FastAPI (novacare-backend/main.py)
+  intent → cause hints → doctor recommend → book yes/no
+  in-memory sessions · optional Ollama via ai.py
+  SQLite appointments/chats (db.py) — mostly unused by UI today</pre>
+    </section>
+
+    <section class="panel">
+      <h2>Screens</h2>
+      <table>
+        <thead>
+          <tr><th>Role</th><th>Tab</th><th>Module</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Rosa</td><td>Home / Reminders</td><td><code>ReminderList.jsx</code></td></tr>
+          <tr><td>Rosa</td><td>Capture</td><td><code>Capture.jsx</code></td></tr>
+          <tr><td>Rosa</td><td>Talk</td><td><code>Chat.jsx</code></td></tr>
+          <tr><td>Carlos</td><td>Dashboard / Alerts</td><td><code>AlertList.jsx</code></td></tr>
+          <tr><td>Carlos</td><td>Wallet</td><td><code>Wallet.jsx</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>Data flows</h2>
+      <ul class="flows">
+        <li><span>Reminders</span> confirm → sponsor alert (client state)</li>
+        <li><span>Capture</span> simulated BP → sponsor alert</li>
+        <li><span>Wallet</span> top-up → balance + alert</li>
+        <li><span>Chat</span> only path that hits the network</li>
+      </ul>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Service probes</h2>
+      <div class="cards" id="probeCards">
+        <article class="card" data-id="health">
+          <header><h3>GET /</h3><span class="pill" data-pill>idle</span></header>
+          <p class="hint">Backend health</p>
+          <pre class="raw">—</pre>
+        </article>
+        <article class="card" data-id="chat">
+          <header><h3>POST /chat</h3><span class="pill" data-pill>idle</span></header>
+          <p class="hint">Greeting probe</p>
+          <pre class="raw">—</pre>
+        </article>
+        <article class="card" data-id="ui-hint">
+          <header><h3>UI Chat.jsx URL</h3><span class="pill" data-pill>info</span></header>
+          <p class="hint">Hardcoded in source (verify matches your API)</p>
+          <pre class="raw">https://web-production-65fd8.up.railway.app/chat
+(Railway returned 404 Application not found when last probed)</pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel span-2">
+      <h2>Known gaps</h2>
+      <ul>
+        <li><code>novacare-app-v2/backend/</code> has helpers + SQLite but <strong>no checked-in <code>main.py</code></strong> — use <code>novacare-backend</code>.</li>
+        <li>Reminders, capture, wallet, alerts are <strong>in-memory only</strong>.</li>
+        <li>Production Railway chat host may be retired; prefer local uvicorn while developing.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>NovaCare local overview · static page · no build step · modeled on Meen/MDM-style local dashboards</p>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>

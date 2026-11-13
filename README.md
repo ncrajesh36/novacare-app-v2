@@ -1,16 +1,50 @@
-# React + Vite
+# NovaCare (novacare-app-v2)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Mobile-framed healthcare companion prototype: **Rosa** (patient) handles reminders, BP capture, and symptom chat; **Carlos** (sponsor) sees alerts and manages a wallet.
 
-Currently, two official plugins are available:
+- Live UI: https://novacare-app-v2.vercel.app
+- Chat API lives in sibling repo [`novacare-backend`](https://github.com/ncrajesh36/novacare-backend)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run the app
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Vite serves the React UI (default `http://localhost:5173`).
 
-## Expanding the Oxlint configuration
+### Chat backend (local)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+# in novacare-backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+Point `src/Chat.jsx` at `http://localhost:8000/chat` (it currently targets a Railway URL that may be down).
+
+## Local overview dashboard
+
+Static developer overview (architecture, screens, data flows, live API probes) — same idea as a Meen/MDM local overview:
+
+```bash
+cd overview
+python3 -m http.server 8085
+```
+
+Open http://localhost:8085
+
+## Scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Vite HMR |
+| `npm run build` | Production build |
+| `npm run preview` | Preview build |
+| `npm run lint` | Oxlint |
+
+## Stack
+
+- React 19 + Vite 8 + Tailwind CSS 4 + lucide-react
+- FastAPI chat API (separate repo) with optional Ollama helpers under `backend/`
