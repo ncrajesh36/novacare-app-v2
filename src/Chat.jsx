@@ -17,15 +17,24 @@ function Chat() {
     setLoading(true)
 
     try {
-      const response = await fetch('https://web-production-65fd8.up.railway.app/chat', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userText, session_id: 'rosa' }),
       })
+      if (!response.ok) {
+        throw new Error(`Chat request failed (${response.status})`)
+      }
       const data = await response.json()
       setMessages((prev) => [...prev, { from: 'ai', text: data.reply }])
-    } catch (err) {
-      setMessages((prev) => [...prev, { from: 'ai', text: 'Sorry, I could not reach the server.' }])
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          from: 'ai',
+          text: 'Sorry, I could not reach the server. Start the backend with: npm run backend',
+        },
+      ])
     } finally {
       setLoading(false)
     }
