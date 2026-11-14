@@ -16,6 +16,7 @@ export async function POST(request) {
   const viewer = await requireViewer(request)
   if (viewer instanceof Response) return viewer
   const body = await readJson(request)
+  if (body instanceof Response) return body
   if (!body || typeof body.message !== 'string') {
     return badRequest('message is required')
   }

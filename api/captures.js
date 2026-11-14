@@ -12,7 +12,10 @@ export async function POST(request) {
   const viewer = await requireViewer(request)
   if (viewer instanceof Response) return viewer
   const body = await readJson(request)
-  if (!body || typeof body !== 'object') return badRequest('Expected JSON body')
+  if (body instanceof Response) return body
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return badRequest('Expected JSON body')
+  }
 
   const systolic = Number(body.systolic)
   const diastolic = Number(body.diastolic)
