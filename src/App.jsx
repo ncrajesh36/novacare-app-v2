@@ -1,15 +1,35 @@
-import { useState } from 'react'
-import { Home, Camera, Bell, Sparkles, Wallet as WalletIcon, MessageCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Home, Camera, Bell, Sparkles, Wallet as WalletIcon, MessageCircle, Share } from 'lucide-react'
 import ReminderList from './ReminderList'
 import AlertList from './AlertList'
 import Capture from './Capture'
 import Wallet from './Wallet'
 import Chat from './Chat'
 
+function isIosSafari() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const standalone = window.navigator.standalone === true
+  return iOS && !standalone
+}
+
 function App() {
   const [role, setRole] = useState('patient')
   const [patientTab, setPatientTab] = useState('home')
   const [sponsorTab, setSponsorTab] = useState('dashboard')
+  const [showInstallHint, setShowInstallHint] = useState(false)
+
+  useEffect(() => {
+    if (!isIosSafari()) return
+    if (sessionStorage.getItem('novacare-install-hint') === '1') return
+    setShowInstallHint(true)
+  }, [])
+
+  const dismissInstallHint = () => {
+    sessionStorage.setItem('novacare-install-hint', '1')
+    setShowInstallHint(false)
+  }
 
   const [reminders, setReminders] = useState([
     { id: 1, label: 'Morning pills', done: true },
@@ -62,6 +82,25 @@ function App() {
             <span>NovaCare</span>
           </div>
         </div>
+
+        {showInstallHint && (
+          <div className="mx-4 mb-2 rounded-2xl bg-teal-50 border border-teal-100 px-3 py-2 text-xs text-teal-900">
+            <div className="flex items-start gap-2">
+              <Share size={14} className="mt-0.5 shrink-0" />
+              <p className="flex-1 leading-snug">
+                Install on iPhone: tap <span className="font-semibold">Share</span>, then{' '}
+                <span className="font-semibold">Add to Home Screen</span>.
+              </p>
+              <button
+                type="button"
+                onClick={dismissInstallHint}
+                className="font-semibold text-teal-700 shrink-0"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Role switch */}
         <div className="px-4 pt-2 pb-3">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Send, Loader2 } from 'lucide-react'
+import { askChat } from './chatAssistant'
 
 function Chat() {
   const [messages, setMessages] = useState([
@@ -17,23 +18,12 @@ function Chat() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText, session_id: 'rosa' }),
-      })
-      if (!response.ok) {
-        throw new Error(`Chat request failed (${response.status})`)
-      }
-      const data = await response.json()
-      setMessages((prev) => [...prev, { from: 'ai', text: data.reply }])
+      const reply = await askChat(userText, 'rosa')
+      setMessages((prev) => [...prev, { from: 'ai', text: reply }])
     } catch {
       setMessages((prev) => [
         ...prev,
-        {
-          from: 'ai',
-          text: 'Sorry, I could not reach the server. Start the backend with: npm run backend',
-        },
+        { from: 'ai', text: 'Sorry, something went wrong. Please try again.' },
       ])
     } finally {
       setLoading(false)
