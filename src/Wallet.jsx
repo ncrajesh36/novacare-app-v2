@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Wallet as WalletIcon, ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 
 function Wallet({ balance, onTopup }) {
   const [showPicker, setShowPicker] = useState(false)

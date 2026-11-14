@@ -1,23 +1,39 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
+# Local-dev only: Vite is same-origin via proxy in the published app path.
+ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
+MAX_SESSIONS = 200
+MAX_MESSAGE_LENGTH = 2000
 sessions: dict[str, dict] = {}
 
 
 class ChatRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+    message: str = Field(min_length=1, max_length=MAX_MESSAGE_LENGTH)
+    session_id: str = Field(default="default", max_length=64)
+
+
+def prune_sessions() -> None:
+    if len(sessions) <= MAX_SESSIONS:
+        return
+    overflow = len(sessions) - MAX_SESSIONS
+    for key in list(sessions.keys())[:overflow]:
+        sessions.pop(key, None)
 
 
 def detect_intent(msg: str) -> str:
@@ -85,6 +101,7 @@ def recommend_doctor(msg: str) -> str:
 
 
 def process(session_id: str, message: str) -> str:
+    prune_sessions()
     state = sessions.setdefault(
         session_id,
         {
@@ -126,10 +143,6 @@ def process(session_id: str, message: str) -> str:
         ):
             return "Please describe your symptoms so I can assist you."
 
-        if intent == "unknown" and state["step"] == "idle":
-            # Treat free-text descriptions as symptoms so chat stays useful
-            pass
-
         cause = get_cause(msg)
         doctor = recommend_doctor(msg)
         state["symptoms"] = msg
@@ -146,6 +159,8 @@ def process(session_id: str, message: str) -> str:
 
 @app.post("/chat")
 def chat(req: ChatRequest):
+    if len(sessions) >= MAX_SESSIONS and req.session_id not in sessions:
+        raise HTTPException(status_code=429, detail="Too many active sessions")
     return {"reply": process(req.session_id, req.message)}
 
 

@@ -1,10 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Home, Camera, Bell, Sparkles, Wallet as WalletIcon, MessageCircle, Share } from 'lucide-react'
 import ReminderList from './ReminderList'
 import AlertList from './AlertList'
 import Capture from './Capture'
 import Wallet from './Wallet'
 import Chat from './Chat'
+import { api } from './apiClient'
+
+const FALLBACK_REMINDERS = [
+  { id: 1, label: 'Morning pills', done: true },
+  { id: 2, label: 'Check blood pressure', done: false },
+  { id: 3, label: 'Evening pills', done: false },
+]
+
+const FALLBACK_ALERTS = [
+  { id: 1, text: 'Rosa confirmed: Morning pills', time: '7:04 AM' },
+]
 
 function isIosSafari() {
   if (typeof navigator === 'undefined') return false
@@ -19,6 +30,13 @@ function App() {
   const [patientTab, setPatientTab] = useState('home')
   const [sponsorTab, setSponsorTab] = useState('dashboard')
   const [showInstallHint, setShowInstallHint] = useState(false)
+  const [reminders, setReminders] = useState(FALLBACK_REMINDERS)
+  const [alerts, setAlerts] = useState(FALLBACK_ALERTS)
+  const [balance, setBalance] = useState(84.5)
+  const [sampleData, setSampleData] = useState(true)
+  const [ready, setReady] = useState(false)
+  const persistTimer = useRef(null)
+  const skipNextPersist = useRef(true)
 
   useEffect(() => {
     if (!isIosSafari()) return
@@ -26,31 +44,69 @@ function App() {
     setShowInstallHint(true)
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const state = await api('/api/state')
+        if (cancelled) return
+        setReminders(state.reminders || FALLBACK_REMINDERS)
+        setAlerts(state.alerts || FALLBACK_ALERTS)
+        setBalance(typeof state.balance === 'number' ? state.balance : 84.5)
+        setSampleData(Boolean(state.sampleData))
+      } catch {
+        if (!cancelled) setSampleData(true)
+      } finally {
+        if (!cancelled) {
+          skipNextPersist.current = true
+          setReady(true)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false
+      return
+    }
+    clearTimeout(persistTimer.current)
+    persistTimer.current = setTimeout(async () => {
+      try {
+        const state = await api('/api/state', {
+          method: 'PUT',
+          body: JSON.stringify({ reminders, alerts, balance }),
+        })
+        setSampleData(Boolean(state.sampleData))
+      } catch {
+        // Keep UI usable offline; next successful sync will save.
+      }
+    }, 300)
+    return () => clearTimeout(persistTimer.current)
+  }, [reminders, alerts, balance, ready])
+
   const dismissInstallHint = () => {
     sessionStorage.setItem('novacare-install-hint', '1')
     setShowInstallHint(false)
   }
 
-  const [reminders, setReminders] = useState([
-    { id: 1, label: 'Morning pills', done: true },
-    { id: 2, label: 'Check blood pressure', done: false },
-    { id: 3, label: 'Evening pills', done: false },
-  ])
-
-  const [alerts, setAlerts] = useState([
-    { id: 1, text: 'Rosa confirmed: Morning pills', time: '7:04 AM' },
-  ])
-
-  const [balance, setBalance] = useState(84.50)
-
   const pushAlert = (text) => {
-    setAlerts((prev) => [{ id: Date.now(), text, time: 'just now' }, ...prev])
+    setAlerts((prev) => [{ id: Date.now(), text, time: 'just now' }, ...prev].slice(0, 100))
   }
 
   const toggleReminder = (id) => {
-    const reminder = reminders.find((r) => r.id === id)
-    setReminders(reminders.map((r) => (r.id === id ? { ...r, done: !r.done } : r)))
-    if (reminder && !reminder.done) pushAlert(`Rosa confirmed: ${reminder.label}`)
+    setReminders((prev) => {
+      const reminder = prev.find((r) => r.id === id)
+      const next = prev.map((r) => (r.id === id ? { ...r, done: !r.done } : r))
+      if (reminder && !reminder.done) {
+        queueMicrotask(() => pushAlert(`Rosa confirmed: ${reminder.label}`))
+      }
+      return next
+    })
   }
 
   const topUp = (amount) => {
@@ -74,7 +130,6 @@ function App() {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-8">
       <div className="w-full max-w-sm h-[700px] bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden flex flex-col">
 
-        {/* Status bar */}
         <div className="flex items-center justify-between px-5 pt-3 pb-1 text-xs font-semibold text-gray-900">
           <span>9:41</span>
           <div className="flex items-center gap-1">
@@ -82,6 +137,10 @@ function App() {
             <span>NovaCare</span>
           </div>
         </div>
+
+        {sampleData && (
+          <p className="px-5 pb-1 text-[10px] text-gray-400">Using sample data until Postgres is connected</p>
+        )}
 
         {showInstallHint && (
           <div className="mx-4 mb-2 rounded-2xl bg-teal-50 border border-teal-100 px-3 py-2 text-xs text-teal-900">
@@ -102,7 +161,6 @@ function App() {
           </div>
         )}
 
-        {/* Role switch */}
         <div className="px-4 pt-2 pb-3">
           <div className="flex rounded-full bg-gray-100 p-1">
             <button
@@ -120,7 +178,6 @@ function App() {
           </div>
         </div>
 
-        {/* Screen content */}
         <div key={role === 'patient' ? patientTab : sponsorTab} className="flex-1 overflow-y-auto p-6 animate-fadein">
           {role === 'patient' ? (
             <>
@@ -173,7 +230,6 @@ function App() {
           )}
         </div>
 
-        {/* Bottom tab bar */}
         <div className="flex items-center justify-around px-2 pt-2 pb-6 border-t border-gray-100">
           {(role === 'patient' ? patientTabs : sponsorTabs).map((t) => {
             const Icon = t.icon

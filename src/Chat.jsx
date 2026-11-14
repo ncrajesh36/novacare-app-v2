@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Send, Loader2 } from 'lucide-react'
-import { askChat } from './chatAssistant'
+import { askChat, loadChatHistory } from './chatAssistant'
 
 function Chat() {
   const [messages, setMessages] = useState([
@@ -8,6 +8,17 @@ function Chat() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const history = await loadChatHistory('rosa')
+      if (!cancelled && history?.length) setMessages(history)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const sendMessage = async () => {
     if (!input.trim()) return

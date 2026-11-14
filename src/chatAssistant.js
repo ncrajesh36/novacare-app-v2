@@ -1,4 +1,8 @@
+import { api } from './apiClient'
+
+// Lightweight client fallback when /api/chat is unavailable (offline static preview).
 const sessions = new Map()
+const MAX_SESSIONS = 50
 
 function detectIntent(msg) {
   const text = msg.toLowerCase().trim()
@@ -38,6 +42,10 @@ function recommendDoctor(msg) {
 }
 
 export function processLocalChat(sessionId, message) {
+  if (sessions.size > MAX_SESSIONS) {
+    const first = sessions.keys().next().value
+    sessions.delete(first)
+  }
   const state = sessions.get(sessionId) ?? {
     step: 'idle',
     symptoms: '',
@@ -49,19 +57,14 @@ export function processLocalChat(sessionId, message) {
   const msg = message.trim()
   const intent = detectIntent(msg)
 
-  if (intent === 'thanks') {
-    return "😊 You're welcome! Take care and stay healthy."
-  }
-
+  if (intent === 'thanks') return "😊 You're welcome! Take care and stay healthy."
   if (intent === 'greeting') {
     state.step = 'idle'
     return '👋 Hello! Please describe your symptoms so I can help you.'
   }
-
   if (state.booked) {
     return '👍 Your appointment is already confirmed. If you need anything else, let me know.'
   }
-
   if (state.step === 'confirm') {
     const lower = msg.toLowerCase()
     if (lower.includes('yes')) {
@@ -77,7 +80,6 @@ export function processLocalChat(sessionId, message) {
     }
     return "Please reply with 'yes' or 'no' to confirm appointment."
   }
-
   if (intent === 'unknown' && state.step === 'idle' && ![...msg].some((c) => /[a-zA-Z]/.test(c))) {
     return 'Please describe your symptoms so I can assist you.'
   }
@@ -96,16 +98,25 @@ export function processLocalChat(sessionId, message) {
 
 export async function askChat(message, sessionId = 'rosa') {
   try {
-    const response = await fetch('/api/chat', {
+    const data = await api('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, session_id: sessionId }),
     })
-    if (!response.ok) throw new Error(`Chat request failed (${response.status})`)
-    const data = await response.json()
     if (typeof data.reply === 'string') return data.reply
   } catch {
-    // Published / offline builds have no FastAPI — use the same rule engine locally.
+    // Fall back for offline/static previews without the API host.
   }
   return processLocalChat(sessionId, message)
+}
+
+export async function loadChatHistory(sessionId = 'rosa') {
+  try {
+    const data = await api(`/api/chat?session_id=${encodeURIComponent(sessionId)}`)
+    if (Array.isArray(data.messages) && data.messages.length) {
+      return data.messages.map((m) => ({ from: m.from, text: m.text }))
+    }
+  } catch {
+    // ignore
+  }
+  return null
 }
